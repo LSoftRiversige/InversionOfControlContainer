@@ -1,0 +1,14 @@
+﻿---- basic functionality
+1) resolving concrete classes (witout registration)
+2) resolve interfaces
+3) dependecnies can have one constructor with various paramters
+4) unit tests for all scenarious
+
+---- advanced features
+4) singleton registration
+5) circular dependencies
+6) properties injection (with attributes)
+7) Lazy<T> inejction
+8) dependencies registration from file
+
+DEADLINE: 10 january
