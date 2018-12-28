@@ -56,13 +56,26 @@ namespace InversionOfControl.Tests
         }
 
         [Fact]
+        public void Bind_InterfaceAndValueParams_CheckValue()
+        {
+            var container = new Container();
+            container.Bind<IBaz, Baz>()
+                .WithConstructorArgument("value", 500);
+            container.Bind<IFoo, Foo>();
+
+            IBaz baz = container.Get<IBaz>();
+
+            Assert.Equal(500, baz.Value);
+        }
+
+        [Fact]
         public void Bind_StackOverflow_Throws()
         {
             var container = new Container();
             container.Bind<IProduct, Product>();
             container.Bind<IInvoice, Invoice>();
 
-            Assert.Throws<InvalidOperationException>(()=> container.Get<IProduct>());
+            Assert.Throws<InvalidOperationException>(() => container.Get<IProduct>());
         }
 
         [Fact]
@@ -72,7 +85,7 @@ namespace InversionOfControl.Tests
             container.Bind<IProduct, Product>();
             container.Bind<IInvoice, Invoice>();
 
-            AssertThrowsCheckMessage(()=> container.Get<IProduct>(), 
+            TestUtils.AssertThrowsCheckMessage(() => container.Get<IProduct>(),
                 "Circular constructor parameter reference for class 'IProduct'");
         }
 
@@ -91,7 +104,7 @@ namespace InversionOfControl.Tests
             var container = new Container();
             container.Bind<IBar, Bar>();
 
-            AssertThrowsCheckMessage(() => container.Bind<IBar, Bar>(),
+            TestUtils.AssertThrowsCheckMessage(() => container.Bind<IBar, Bar>(),
                 "Duplicate register of binding 'IBar' => 'Bar'");
         }
 
@@ -115,14 +128,14 @@ namespace InversionOfControl.Tests
         public void Bind_SameRefs_ThrowsMessage()
         {
             var container = new Container();
-            AssertThrowsCheckMessage(()=> container.Bind<IBar, IBar>(), "'IBar' and 'IBar' types must be different");
+            TestUtils.AssertThrowsCheckMessage(() => container.Bind<IBar, IBar>(), "'IBar' and 'IBar' types must be different");
         }
 
         [Fact]
         public void Bind_FirstIsClass_ThrowsMessage()
         {
             var container = new Container();
-            AssertThrowsCheckMessage(() => container.Bind<Bar, IBar>(), "'Bar' must be an interface");
+            TestUtils.AssertThrowsCheckMessage(() => container.Bind<Bar, IBar>(), "'Bar' must be an interface");
         }
 
         [Fact]
@@ -153,7 +166,7 @@ namespace InversionOfControl.Tests
             var container = new Container();
             container.Bind<IWarrior, Warrior>();
 
-            AssertThrowsCheckMessage(
+            TestUtils.AssertThrowsCheckMessage(
                 () => container.WithConstructorArgument(
                     "name1", "NameOfWarrior"
                     ), "No constructor was found with parameter 'name1' in the class 'Warrior'");
@@ -169,27 +182,12 @@ namespace InversionOfControl.Tests
                 .WithConstructorArgument("name", "NameOfWarrior")
                 .WithConstructorArgument("name", "NameSecond"));
         }
-
-        private void AssertThrowsCheckMessage(Action action, string sampleMessage)
-        {
-            string m = string.Empty;
-            try
-            {
-                action();
-            }
-            catch (Exception e)
-            {
-                m = e.Message;
-            }
-
-            Assert.Equal(sampleMessage, m);
-        }
-
+               
         [Fact]
         public void WithConstructorArgument_ArgumentAlreadyRegistered_ThrowsMessage()
         {
             var container = new Container();
-            AssertThrowsCheckMessage(() => container.Bind<IWarrior, Warrior>()
+            TestUtils.AssertThrowsCheckMessage(() => container.Bind<IWarrior, Warrior>()
                 .WithConstructorArgument("name", "NameOfWarrior")
                 .WithConstructorArgument("name", "NameSecond"),
                 "Parameter 'name' already registered");
@@ -202,7 +200,6 @@ namespace InversionOfControl.Tests
 
             Assert.Throws<InvalidOperationException>(
                 () => container.WithConstructorArgument("name", "NameOfWarrior"));
-
         }
 
         [Fact]
@@ -216,7 +213,6 @@ namespace InversionOfControl.Tests
             var obj = container.Get<IFoo>();
 
             Assert.Equal(c100, obj.Counter);
-
         }
 
         [Fact]
@@ -227,7 +223,7 @@ namespace InversionOfControl.Tests
             container.Bind<IFoo, Foo>()
                 .WithPropertyValue("Counter", c100);
 
-            Assert.Throws<InvalidOperationException>(()=>container.WithPropertyValue("Counter", 1));
+            Assert.Throws<InvalidOperationException>(() => container.WithPropertyValue("Counter", 1));
         }
 
         [Fact]
@@ -238,7 +234,7 @@ namespace InversionOfControl.Tests
             container.Bind<IFoo, Foo>()
                 .WithPropertyValue("Counter", c100);
 
-            AssertThrowsCheckMessage(() => container.WithPropertyValue("Counter", 1), 
+            TestUtils.AssertThrowsCheckMessage(() => container.WithPropertyValue("Counter", 1),
                 "Property 'Counter' already registered");
         }
 
@@ -259,7 +255,7 @@ namespace InversionOfControl.Tests
             const int c100 = 100;
             container.Bind<IFoo, Foo>();
 
-            AssertThrowsCheckMessage(() => container.WithPropertyValue("Counter1", c100), 
+            TestUtils.AssertThrowsCheckMessage(() => container.WithPropertyValue("Counter1", c100),
                 "Property 'Counter1' not found in class 'Foo'");
         }
 
@@ -316,7 +312,7 @@ namespace InversionOfControl.Tests
         {
             var container = new Container();
 
-            Assert.Throws<InvalidOperationException>(()=> container.WithConstructorArgument("power", 1000));
+            Assert.Throws<InvalidOperationException>(() => container.WithConstructorArgument("power", 1000));
         }
 
         [Fact]
@@ -324,7 +320,7 @@ namespace InversionOfControl.Tests
         {
             var container = new Container();
 
-            AssertThrowsCheckMessage(() => container.WithConstructorArgument("power", 1000),
+            TestUtils.AssertThrowsCheckMessage(() => container.WithConstructorArgument("power", 1000),
                 "Method 'WithConstructorArgument' must called after 'Bind'");
         }
     }

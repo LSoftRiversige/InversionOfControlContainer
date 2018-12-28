@@ -21,36 +21,33 @@ namespace InversionOfControlContainer
 
         public IContainer Bind<TInterface, TClass>()
         {
-            CheckBindParams<TInterface, TClass>();
-            lastBinding = typeof(TInterface);
-            Bindings[lastBinding] = new ClassDescription() { ObjectType = typeof(TClass) };
-            return this;
+            return Bind(typeof(TInterface), typeof(TClass));
         }
 
-        private void CheckBindParams<TInterface, TClass>()
+        private void CheckBindParams(Type interfaceType, Type classType)
         {
-            if (typeof(TInterface).IsClass)
+            if (interfaceType.IsClass)
             {
-                throw new InvalidOperationException($"'{GetName<TInterface>()}' must be an interface");
+                throw new InvalidOperationException($"'{GetName(interfaceType)}' must be an interface");
             }
-            if (typeof(TInterface) == typeof(TClass))
+            if (interfaceType == classType)
             {
-                throw new InvalidOperationException($"'{GetName<TInterface>()}' and '{GetName<TClass>()}' types must be different");
+                throw new InvalidOperationException($"'{GetName(interfaceType)}' and '{GetName(classType)}' types must be different");
             }
-            if (Bindings.ContainsKey(typeof(TInterface)))
+            if (Bindings.ContainsKey(interfaceType))
             {
-                throw new InvalidOperationException($"Duplicate register of binding '{GetName<TInterface>()}' => '{GetName<TClass>()}'");
+                throw new InvalidOperationException($"Duplicate register of binding '{GetName(interfaceType)}' => '{GetName(classType)}'");
             }
         }
 
-        private static string GetName<T>()
+        private static string GetName(Type t)
         {
-            return typeof(T).Name;
+            return t.Name;
         }
 
         public T GetSingltone<T>()
         {
-            return (T)Get(typeof(T), isSingltone:true);
+            return (T)Get(typeof(T), isSingltone: true);
         }
 
         public IContainer WithConstructorArgument(string paramName, object paramValue)
@@ -59,7 +56,15 @@ namespace InversionOfControlContainer
             classDescription.WithConstructorArgument(paramName, paramValue);
             return this;
         }
-               
+
+        public IContainer Bind(Type interfaceType, Type classType)
+        {
+            CheckBindParams(interfaceType, classType);
+            lastBinding = interfaceType;
+            Bindings[lastBinding] = new ClassDescription() { ObjectType = classType };
+            return this;
+        }
+
         public IContainer WithPropertyValue(string name, object value)
         {
             IClassDescription classDescription = GetLastBindingClass("WithPropertyValue");
@@ -72,7 +77,7 @@ namespace InversionOfControlContainer
             return (T)Get(typeof(T));
         }
 
-        private object Get(Type type, HashSet<Type> stack = null, bool isSingltone=false)
+        private object Get(Type type, HashSet<Type> stack = null, bool isSingltone = false)
         {
             object[] constructorParams = null;
 
@@ -134,7 +139,7 @@ namespace InversionOfControlContainer
 
         private void AddSingletoneObject(Type type, object obj)
         {
-            if (singletonObjects==null)
+            if (singletonObjects == null)
             {
                 singletonObjects = new Dictionary<Type, object>();
             }
@@ -143,7 +148,7 @@ namespace InversionOfControlContainer
 
         private object FindSingletoneObject(Type type)
         {
-            if (singletonObjects==null)
+            if (singletonObjects == null)
             {
                 return null;
             }
@@ -166,8 +171,8 @@ namespace InversionOfControlContainer
 
         private IClassDescription DescriptionByClass(Type t)
         {
-           IClassDescription foundClass = bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
-            if (foundClass==null)
+            IClassDescription foundClass = bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
+            if (foundClass == null)
             {
                 foundClass = new ClassDescription() { ObjectType = t };
                 bindings[t] = foundClass;
@@ -251,7 +256,7 @@ namespace InversionOfControlContainer
 
         public Lazy<T> GetLazy<T>()
         {
-            return new Lazy<T>(()=> Get<T>());
+            return new Lazy<T>(() => Get<T>());
         }
     }
 }

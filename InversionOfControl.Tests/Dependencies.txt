@@ -1,0 +1,6 @@
+﻿IBar -> Bar;
+IFoo -> Foo;
+
+//IFoo -> Foo, Counter=200, Price=20.5, Model="Name of model foo";
+//IWarrior -> Warrior(name="Name of hero", power=1500);
+//IBaz -> Baz(value=300), Message="Hello, world!";

@@ -9,6 +9,6 @@
 5) +circular dependencies
 6) +properties injection (with attributes)
 7) +Lazy<T> inejction
-8) dependencies registration from file
+8) +dependencies registration from file
 
 DEADLINE: 10 january

@@ -24,10 +24,10 @@ namespace InversionOfControlContainer
         {
             ConstructorInfo constructorWithTheParam = ObjectType
                 .GetConstructors()
-                .FirstOrDefault(c => 
+                .FirstOrDefault(c =>
                     c.GetParameters()
-                    .FirstOrDefault(p=>p.Name.Equals(paramName)) != null);
-            if (constructorWithTheParam==null)
+                    .FirstOrDefault(p => p.Name.Equals(paramName)) != null);
+            if (constructorWithTheParam == null)
             {
                 throw new InvalidOperationException($"No constructor was found with parameter '{paramName}' in the class '{ClassName()}'");
             }
@@ -66,7 +66,7 @@ namespace InversionOfControlContainer
 
         private void CheckPropertyExists(string propertyName)
         {
-            if(ObjectType.GetProperty(propertyName)==null)
+            if (ObjectType.GetProperty(propertyName) == null)
             {
                 throw new InvalidOperationException($"Property '{propertyName}' not found in class '{ClassName()}'");
             }
