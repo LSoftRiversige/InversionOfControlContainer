@@ -14,6 +14,12 @@ namespace InversionOfControl.Tests
         private const string FileName = "Dependencies.txt";
         private const string UnknownFileName = "FileNameThatNotExists.txt";
 
+        public DependencyFileTests()
+        {
+            File.Delete(FileName);
+            File.AppendAllLines(FileName, new string[] { "IBar -> Bar;", "IFoo -> Foo;" });
+        }
+
         [Fact]
         public void LoadFromFile_FileNotExists_Throw()
         {
