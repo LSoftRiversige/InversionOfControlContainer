@@ -10,6 +10,7 @@ namespace InversionOfControlContainer
     {
         private readonly Dictionary<Type, IClassDescription> bindings;
         private Type lastBinding;
+        private Dictionary<Type, object> singletonObjects;
 
         public Dictionary<Type, IClassDescription> Bindings => bindings;
 
@@ -18,25 +19,46 @@ namespace InversionOfControlContainer
             bindings = new Dictionary<Type, IClassDescription>();
         }
 
-        public IContainer Bind<TKey, TValue>()
+        public IContainer Bind<TInterface, TClass>()
         {
-            if (Bindings.ContainsKey(typeof(TKey)))
-            {
-                throw new InvalidOperationException($"Duplicate register of binding {nameof(TKey)} => {nameof(TValue)}");
-            }
-            lastBinding = typeof(TKey);
-            Bindings[lastBinding] = new ClassDescription() { ObjectType = typeof(TValue) };
+            CheckBindParams<TInterface, TClass>();
+            lastBinding = typeof(TInterface);
+            Bindings[lastBinding] = new ClassDescription() { ObjectType = typeof(TClass) };
             return this;
+        }
+
+        private void CheckBindParams<TInterface, TClass>()
+        {
+            if (typeof(TInterface).IsClass)
+            {
+                throw new InvalidOperationException($"'{typeof(TInterface).Name}' must be an interface");
+            }
+            if (typeof(TInterface) == typeof(TClass))
+            {
+                throw new InvalidOperationException($"'{typeof(TInterface).Name}' and '{typeof(TClass).Name}' types must be different");
+            }
+            if (Bindings.ContainsKey(typeof(TInterface)))
+            {
+                throw new InvalidOperationException($"Duplicate register of binding {nameof(TInterface)} => {nameof(TClass)}");
+            }
+        }
+
+        public T GetSingltone<T>()
+        {
+            return (T)Get(typeof(T), isSingltone:true);
         }
 
         public IContainer WithConstructorArgument(string paramName, object paramValue)
         {
-            if (lastBinding == null)
-            {
-                throw new InvalidOperationException("Method 'WithConstructorArgument' must called after 'Bind'");
-            }
-            IClassDescription classDescription = Bindings[lastBinding];
+            IClassDescription classDescription = GetLastBindingClass("WithConstructorArgument");
             classDescription.WithConstructorArgument(paramName, paramValue);
+            return this;
+        }
+               
+        public IContainer WithPropertyValue(string name, object value)
+        {
+            IClassDescription classDescription = GetLastBindingClass("WithPropertyValue");
+            classDescription.WithPropertyValue(name, value);
             return this;
         }
 
@@ -45,26 +67,122 @@ namespace InversionOfControlContainer
             return (T)Get(typeof(T));
         }
 
-        private object Get(Type t, HashSet<Type> stack = null)
+        private object Get(Type type, HashSet<Type> stack = null, bool isSingltone=false)
         {
-            if (t.IsClass)
+            object[] constructorParams = null;
+
+            IClassDescription theClass = FindClassDescription(type);
+
+            if (stack == null)
             {
-                return Activator.CreateInstance(t);
+                stack = new HashSet<Type> { type };
             }
-            if (t.IsInterface)
+            constructorParams = InjectConstructorParams(theClass, stack);
+
+            object obj = CreateObject(theClass.ObjectType, constructorParams, isSingltone);
+
+            InjectPropertiesTo(obj, theClass);
+
+            return obj;
+        }
+
+        private IClassDescription GetLastBindingClass(string methodName)
+        {
+            CheckLastBinding(methodName);
+            IClassDescription classDescription = Bindings[lastBinding];
+            return classDescription;
+        }
+
+        private void CheckLastBinding(string methodName)
+        {
+            if (lastBinding == null)
             {
-                if (stack == null)
+                throw new InvalidOperationException($"Method '{methodName}' must called after 'Bind'");
+            }
+        }
+
+        private object CreateObject(Type type, object[] constructorParams, bool isSingltone)
+        {
+            object obj;
+            if (isSingltone)
+            {
+                obj = FindSingletoneObject(type);
+                if (obj != null)
                 {
-                    stack = new HashSet<Type> { t };
+                    return obj;
                 }
-                IClassDescription theClass = DefineClassByInterface(t);
-                object[] ctorParams = DefineConstructorParams(theClass, stack);
-                return Activator.CreateInstance(theClass.ObjectType, ctorParams);
+            }
+            if (constructorParams == null)
+            {
+                obj = Activator.CreateInstance(type);
+            }
+            else
+            {
+                obj = Activator.CreateInstance(type, constructorParams);
+            }
+            if (isSingltone)
+            {
+                AddSingletoneObject(type, obj);
+            }
+            return obj;
+        }
+
+        private void AddSingletoneObject(Type type, object obj)
+        {
+            if (singletonObjects==null)
+            {
+                singletonObjects = new Dictionary<Type, object>();
+            }
+            singletonObjects.Add(type, obj);
+        }
+
+        private object FindSingletoneObject(Type type)
+        {
+            if (singletonObjects==null)
+            {
+                return null;
+            }
+            singletonObjects.TryGetValue(type, out object obj);
+            return obj;
+        }
+
+        private IClassDescription FindClassDescription(Type type)
+        {
+            if (type.IsClass)
+            {
+                return DescriptionByClass(type);
+            }
+            if (type.IsInterface)
+            {
+                return DescriptionByInterface(type);
             }
             return null;
         }
 
-        private object[] DefineConstructorParams(IClassDescription theClass, HashSet<Type> stack)
+        private IClassDescription DescriptionByClass(Type t)
+        {
+           IClassDescription foundClass = bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
+            if (foundClass==null)
+            {
+                foundClass = new ClassDescription() { ObjectType = t };
+                bindings[t] = foundClass;
+            }
+            return foundClass;
+        }
+
+        private void InjectPropertiesTo(object obj, IClassDescription theClass)
+        {
+            if (theClass != null)
+            {
+                PropertyInfo[] properties = theClass.ObjectType.GetProperties();
+                foreach (var prop in properties)
+                {
+                    theClass.TryInjectProperty(prop, obj);
+                }
+            }
+        }
+
+        private object[] InjectConstructorParams(IClassDescription theClass, HashSet<Type> stack)
         {
             //first constructor with minimum parameters
             ConstructorInfo constructor = theClass.ObjectType.GetConstructors().OrderBy(c => c.GetParameters().Count()).First();
@@ -104,7 +222,7 @@ namespace InversionOfControlContainer
         {
             if (stack.Contains(typeOfParam))
             {
-                throw new InvalidOperationException($"Circular class reference for class '{typeOfParam.Name}'");
+                throw new InvalidOperationException($"Circular constructor parameter reference for class '{typeOfParam.Name}'");
             }
         }
 
@@ -117,7 +235,7 @@ namespace InversionOfControlContainer
             return classDescription.ConstructorParamValues[name];
         }
 
-        private IClassDescription DefineClassByInterface(Type typeOfInterface)
+        private IClassDescription DescriptionByInterface(Type typeOfInterface)
         {
             if (!bindings.ContainsKey(typeOfInterface))
             {

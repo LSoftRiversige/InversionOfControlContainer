@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace InversionOfControlContainer
 {
@@ -9,5 +10,7 @@ namespace InversionOfControlContainer
         Type ObjectType { get; set; }
 
         void WithConstructorArgument(string paramName, object paramValue);
+        void WithPropertyValue(string propertyName, object value);
+        bool TryInjectProperty(PropertyInfo property, object obj);
     }
 }
