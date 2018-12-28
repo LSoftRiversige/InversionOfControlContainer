@@ -5,7 +5,7 @@
 4) +unit tests for all scenarious
 
 ---- advanced features
-4) singleton registration
+4) +singleton registration
 5) +circular dependencies
 6) +properties injection (with attributes)
 7) Lazy<T> inejction

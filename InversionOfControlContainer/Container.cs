@@ -31,16 +31,21 @@ namespace InversionOfControlContainer
         {
             if (typeof(TInterface).IsClass)
             {
-                throw new InvalidOperationException($"'{typeof(TInterface).Name}' must be an interface");
+                throw new InvalidOperationException($"'{GetName<TInterface>()}' must be an interface");
             }
             if (typeof(TInterface) == typeof(TClass))
             {
-                throw new InvalidOperationException($"'{typeof(TInterface).Name}' and '{typeof(TClass).Name}' types must be different");
+                throw new InvalidOperationException($"'{GetName<TInterface>()}' and '{GetName<TClass>()}' types must be different");
             }
             if (Bindings.ContainsKey(typeof(TInterface)))
             {
-                throw new InvalidOperationException($"Duplicate register of binding {nameof(TInterface)} => {nameof(TClass)}");
+                throw new InvalidOperationException($"Duplicate register of binding '{GetName<TInterface>()}' => '{GetName<TClass>()}'");
             }
+        }
+
+        private static string GetName<T>()
+        {
+            return typeof(T).Name;
         }
 
         public T GetSingltone<T>()

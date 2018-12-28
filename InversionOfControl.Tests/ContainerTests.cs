@@ -86,6 +86,16 @@ namespace InversionOfControl.Tests
         }
 
         [Fact]
+        public void Bind_DuplicateRegister_ThrowsMessage()
+        {
+            var container = new Container();
+            container.Bind<IBar, Bar>();
+
+            AssertThrowsCheckMessage(() => container.Bind<IBar, Bar>(),
+                "Duplicate register of binding 'IBar' => 'Bar'");
+        }
+
+        [Fact]
         public void Bind_SameRefs_Throws()
         {
             var container = new Container();
@@ -109,7 +119,7 @@ namespace InversionOfControl.Tests
         }
 
         [Fact]
-        public void Bind_FirstIsClass_CheckThrowMessage()
+        public void Bind_FirstIsClass_ThrowsMessage()
         {
             var container = new Container();
             AssertThrowsCheckMessage(() => container.Bind<Bar, IBar>(), "'Bar' must be an interface");
