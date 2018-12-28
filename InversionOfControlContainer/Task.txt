@@ -12,3 +12,5 @@
 8) +dependencies registration from file
 
 DEADLINE: 10 january
+
+https://github.com/LSoftRiversige/InversionOfControlContainer.git

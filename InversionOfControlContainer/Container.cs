@@ -30,7 +30,8 @@ namespace InversionOfControlContainer
             {
                 throw new InvalidOperationException($"'{GetName(interfaceType)}' must be an interface");
             }
-            if (interfaceType == classType)
+            bool same = interfaceType == classType;
+            if (same)
             {
                 throw new InvalidOperationException($"'{GetName(interfaceType)}' and '{GetName(classType)}' types must be different");
             }
@@ -87,11 +88,11 @@ namespace InversionOfControlContainer
             {
                 stack = new HashSet<Type> { type };
             }
-            constructorParams = InjectConstructorParams(theClass, stack);
+            constructorParams = InjectParametersToConstructor(theClass, stack);
 
             object obj = CreateObject(theClass.ObjectType, constructorParams, isSingltone);
 
-            InjectPropertiesTo(obj, theClass);
+            InjectPropertiesToObject(obj, theClass);
 
             return obj;
         }
@@ -117,12 +118,14 @@ namespace InversionOfControlContainer
             if (isSingltone)
             {
                 obj = FindSingletoneObject(type);
-                if (obj != null)
+                bool singletoneFound = obj != null;
+                if (singletoneFound)
                 {
                     return obj;
                 }
             }
-            if (constructorParams == null)
+            bool noParams = constructorParams == null;
+            if (noParams)
             {
                 obj = Activator.CreateInstance(type);
             }
@@ -139,16 +142,24 @@ namespace InversionOfControlContainer
 
         private void AddSingletoneObject(Type type, object obj)
         {
+            TryToCreateSingletoneBuffer();
+            singletonObjects.Add(type, obj);
+        }
+
+        private bool TryToCreateSingletoneBuffer()
+        {
             if (singletonObjects == null)
             {
                 singletonObjects = new Dictionary<Type, object>();
+                return true;
             }
-            singletonObjects.Add(type, obj);
+            return false;
         }
 
         private object FindSingletoneObject(Type type)
         {
-            if (singletonObjects == null)
+            bool notCreated = singletonObjects == null;
+            if (notCreated)
             {
                 return null;
             }
@@ -171,16 +182,27 @@ namespace InversionOfControlContainer
 
         private IClassDescription DescriptionByClass(Type t)
         {
-            IClassDescription foundClass = bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
+            IClassDescription foundClass = FindBindingByClassType(t);
             if (foundClass == null)
             {
-                foundClass = new ClassDescription() { ObjectType = t };
-                bindings[t] = foundClass;
+                foundClass = AddClassDescription(t);
             }
             return foundClass;
         }
 
-        private void InjectPropertiesTo(object obj, IClassDescription theClass)
+        private IClassDescription FindBindingByClassType(Type t)
+        {
+            return bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
+        }
+
+        private IClassDescription AddClassDescription(Type t)
+        {
+            IClassDescription foundClass = new ClassDescription() { ObjectType = t };
+            bindings[t] = foundClass;
+            return foundClass;
+        }
+
+        private void InjectPropertiesToObject(object obj, IClassDescription theClass)
         {
             if (theClass != null)
             {
@@ -192,13 +214,16 @@ namespace InversionOfControlContainer
             }
         }
 
-        private object[] InjectConstructorParams(IClassDescription theClass, HashSet<Type> stack)
+        private object[] InjectParametersToConstructor(IClassDescription theClass, HashSet<Type> stack)
         {
-            //first constructor with minimum parameters
-            ConstructorInfo constructor = theClass.ObjectType.GetConstructors().OrderBy(c => c.GetParameters().Count()).First();
-
+            ConstructorInfo constructor = GetConstructorWithMinimumParams(theClass);
             ParameterInfo[] parameters = constructor.GetParameters();
             return GetParamValues(parameters, theClass, stack);
+        }
+
+        private static ConstructorInfo GetConstructorWithMinimumParams(IClassDescription theClass)
+        {
+            return theClass.ObjectType.GetConstructors().OrderBy(c => c.GetParameters().Count()).First();
         }
 
         private object[] GetParamValues(ParameterInfo[] parameters, IClassDescription theClass, HashSet<Type> stack)
@@ -217,7 +242,8 @@ namespace InversionOfControlContainer
         {
             Type typeOfParam = p.ParameterType;
             TypeCode typeCode = Type.GetTypeCode(typeOfParam);
-            if (typeCode == TypeCode.Object)
+            bool isObject = typeCode == TypeCode.Object;
+            if (isObject)
             {
                 CheckStackOverflow(stack, typeOfParam);
                 return Get(typeOfParam, stack);
@@ -230,7 +256,8 @@ namespace InversionOfControlContainer
 
         private static void CheckStackOverflow(HashSet<Type> stack, Type typeOfParam)
         {
-            if (stack.Contains(typeOfParam))
+            bool inStack = stack.Contains(typeOfParam);
+            if (inStack)
             {
                 throw new InvalidOperationException($"Circular constructor parameter reference for class '{typeOfParam.Name}'");
             }
@@ -238,7 +265,8 @@ namespace InversionOfControlContainer
 
         private object GetValueByName(string name, IClassDescription classDescription)
         {
-            if (!classDescription.ConstructorParamValues.ContainsKey(name))
+            bool found = classDescription.ConstructorParamValues.ContainsKey(name);
+            if (!found)
             {
                 throw new KeyNotFoundException($"Parameter {name} not found in value list");
             }
@@ -247,7 +275,8 @@ namespace InversionOfControlContainer
 
         private IClassDescription DescriptionByInterface(Type typeOfInterface)
         {
-            if (!bindings.ContainsKey(typeOfInterface))
+            bool found = bindings.ContainsKey(typeOfInterface);
+            if (!found)
             {
                 throw new KeyNotFoundException($"Type {typeOfInterface.Name} is not registered");
             }
