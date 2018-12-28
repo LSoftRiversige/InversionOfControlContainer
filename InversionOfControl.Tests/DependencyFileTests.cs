@@ -11,7 +11,7 @@ namespace InversionOfControl.Tests
 {
     public class DependencyFileTests
     {
-        private const string FileName = @"E:\IT\IoC\InversionOfControl.Tests\Dependencies.txt";
+        private const string FileName = "Dependencies.txt";
         private const string UnknownFileName = "FileNameThatNotExists.txt";
 
         [Fact]
