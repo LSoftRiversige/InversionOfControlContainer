@@ -185,21 +185,6 @@ namespace InversionOfControl.Tests
             Assert.Equal(sampleMessage, m);
         }
 
-        private void AssertThrows<T>(Action action, string sampleMessage) where T: Exception 
-        {
-            string m = string.Empty;
-            try
-            {
-                action();
-            }
-            catch (T e)
-            {
-                m = e.Message;
-            }
-
-            Assert.Equal(sampleMessage, m);
-        }
-
         [Fact]
         public void WithConstructorArgument_ArgumentAlreadyRegistered_ThrowsMessage()
         {
@@ -300,6 +285,47 @@ namespace InversionOfControl.Tests
             IBar ston = container.GetSingltone<IBar>();
 
             Assert.Equal(typeof(Bar), ston.GetType());
+        }
+
+        [Fact]
+        public void GetLazy_LazyResolve_NewObject()
+        {
+            var container = new Container();
+            container.Bind<IBar, Bar>();
+            container.Bind<IFoo, Foo>();
+
+            Lazy<IBar> lazyBar = container.GetLazy<IBar>();
+
+            Assert.Equal(typeof(Bar), lazyBar.Value.GetType());
+        }
+
+        [Fact]
+        public void GetLazy_LazyResolveClass_NewObject()
+        {
+            var container = new Container();
+            container.Bind<IBar, Bar>();
+            container.Bind<IFoo, Foo>();
+
+            Lazy<Bar> lazyBar = container.GetLazy<Bar>();
+
+            Assert.Equal(typeof(Bar), lazyBar.Value.GetType());
+        }
+
+        [Fact]
+        public void WithConstructorArgument_NotBindCalled_Throws()
+        {
+            var container = new Container();
+
+            Assert.Throws<InvalidOperationException>(()=> container.WithConstructorArgument("power", 1000));
+        }
+
+        [Fact]
+        public void WithConstructorArgument_NotBindCalled_ThrowsMessage()
+        {
+            var container = new Container();
+
+            AssertThrowsCheckMessage(() => container.WithConstructorArgument("power", 1000),
+                "Method 'WithConstructorArgument' must called after 'Bind'");
         }
     }
 }

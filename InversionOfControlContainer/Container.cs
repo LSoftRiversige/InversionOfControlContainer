@@ -248,5 +248,10 @@ namespace InversionOfControlContainer
             }
             return bindings[typeOfInterface];
         }
+
+        public Lazy<T> GetLazy<T>()
+        {
+            return new Lazy<T>(()=> Get<T>());
+        }
     }
 }
