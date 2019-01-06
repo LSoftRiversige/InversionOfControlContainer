@@ -38,7 +38,7 @@ namespace InversionOfControlContainer
         {
             return (T)Get(typeof(T));
         }
-
+                
         public T GetSingltone<T>()
         {
             return (T)Get(typeof(T), isSingltone: true);
@@ -51,7 +51,7 @@ namespace InversionOfControlContainer
 
         //private---------------------------------------------------------------
 
-        private object Get(Type type, bool isSingltone = false)
+        public object Get(Type type, bool isSingltone = false)
         {
             object[] constructorParams = null;
 
@@ -139,7 +139,7 @@ namespace InversionOfControlContainer
             bool noParams = constructorParams == null;
             if (noParams)
             {
-                obj = Activator.CreateInstance(type);
+                obj = Activator.CreateInstance(type);               
             }
             else
             {
@@ -265,7 +265,5 @@ namespace InversionOfControlContainer
             }
             return bindings[typeOfInterface];
         }
-
-        
     }
 }

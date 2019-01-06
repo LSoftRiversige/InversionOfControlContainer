@@ -240,6 +240,6 @@ namespace InversionOfControl.Tests
             Lazy<Bar> lazyBar = container.GetLazy<Bar>();
 
             Assert.Equal(typeof(Bar), lazyBar.Value.GetType());
-        }
+        }       
     }
 }
