@@ -11,6 +11,8 @@ namespace InversionOfControlContainer
         private readonly Dictionary<Type, ClassDescription> bindings;
         private Dictionary<Type, object> singletonObjects;
 
+        //public -------------------------------------------------------------
+
         public Dictionary<Type, ClassDescription> Bindings => bindings;
 
         public Container()
@@ -21,6 +23,66 @@ namespace InversionOfControlContainer
         public ClassDescription Bind<TInterface, TClass>()
         {
             return Bind(typeof(TInterface), typeof(TClass));
+        }
+
+        public ClassDescription Bind(Type interfaceType, Type classType)
+        {
+            CheckBindParams(interfaceType, classType);
+            ClassDescription result = new ClassDescription() { ObjectType = classType };
+            Bindings[interfaceType] = result;
+            CheckStackOverflow(classType, new HashSet<Type>());
+            return result;
+        }
+
+        public T Get<T>()
+        {
+            return (T)Get(typeof(T));
+        }
+
+        public T GetSingltone<T>()
+        {
+            return (T)Get(typeof(T), isSingltone: true);
+        }
+
+        public Lazy<T> GetLazy<T>()
+        {
+            return new Lazy<T>(() => Get<T>());
+        }
+
+        //private---------------------------------------------------------------
+
+        private object Get(Type type, bool isSingltone = false)
+        {
+            object[] constructorParams = null;
+
+            IClassDescription theClass = FindClassDescription(type);
+
+            constructorParams = InjectParametersToConstructor(theClass);
+
+            object obj;
+
+            if (isSingltone)
+            {
+                obj = FindSingletoneObject(type);
+
+                bool singletoneFound = obj != null;
+
+                if (singletoneFound)
+                {
+                    return obj;
+                }
+            }
+
+            obj = CreateObject(theClass.ObjectType, constructorParams);
+
+            if (isSingltone)
+            {
+                AddSingletoneObject(type, obj);
+            }
+
+            theClass.InjectPropertiesToObject(obj);
+
+            return obj;
         }
 
         private void CheckBindParams(Type interfaceType, Type classType)
@@ -69,53 +131,11 @@ namespace InversionOfControlContainer
         {
             return t.Name;
         }
-
-        public T GetSingltone<T>()
-        {
-            return (T)Get(typeof(T), isSingltone: true);
-        }
         
-        public ClassDescription Bind(Type interfaceType, Type classType)
-        {
-            CheckBindParams(interfaceType, classType);
-            ClassDescription result = new ClassDescription() { ObjectType = classType };
-            Bindings[interfaceType] = result;
-            CheckStackOverflow(classType, new HashSet<Type>());
-            return result;
-        }
-        
-        public T Get<T>()
-        {
-            return (T)Get(typeof(T));
-        }
-
-        private object Get(Type type, bool isSingltone = false)
-        {
-            object[] constructorParams = null;
-
-            IClassDescription theClass = FindClassDescription(type);
-            
-            constructorParams = InjectParametersToConstructor(theClass);
-
-            object obj = CreateObject(theClass.ObjectType, constructorParams, isSingltone);
-
-            theClass.InjectPropertiesToObject(obj);
-
-            return obj;
-        }
-        
-        private object CreateObject(Type type, object[] constructorParams, bool isSingltone)
+        private object CreateObject(Type type, object[] constructorParams)
         {
             object obj;
-            if (isSingltone)
-            {
-                obj = FindSingletoneObject(type);
-                bool singletoneFound = obj != null;
-                if (singletoneFound)
-                {
-                    return obj;
-                }
-            }
+            
             bool noParams = constructorParams == null;
             if (noParams)
             {
@@ -125,10 +145,7 @@ namespace InversionOfControlContainer
             {
                 obj = Activator.CreateInstance(type, constructorParams);
             }
-            if (isSingltone)
-            {
-                AddSingletoneObject(type, obj);
-            }
+            
             return obj;
         }
 
@@ -249,9 +266,6 @@ namespace InversionOfControlContainer
             return bindings[typeOfInterface];
         }
 
-        public Lazy<T> GetLazy<T>()
-        {
-            return new Lazy<T>(() => Get<T>());
-        }
+        
     }
 }
