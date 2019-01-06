@@ -28,18 +28,8 @@ namespace InversionOfControl.Tests
                 new StringDependencyParser(
                     Assembly.GetExecutingAssembly()));
 
-            Assert.Throws<FileNotFoundException>(() => f.LoadFromFile(UnknownFileName));
-        }
-
-        [Fact]
-        public void LoadFromFile_FileNotExists_ThrowMessage()
-        {
-            var f = new DependencyFile(
-                new Container(),
-                new StringDependencyParser(
-                    Assembly.GetExecutingAssembly()));
-
-            TestUtils.AssertThrowsCheckMessage(() => f.LoadFromFile(UnknownFileName), "File not found");
+            var e = Assert.Throws<FileNotFoundException>(() => f.LoadFromFile(UnknownFileName));
+            Assert.Equal("File not found", e.Message);
         }
 
         [Fact]

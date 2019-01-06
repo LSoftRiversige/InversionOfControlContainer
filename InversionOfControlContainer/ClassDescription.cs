@@ -12,21 +12,22 @@ namespace InversionOfControlContainer
         public Dictionary<string, object> ConstructorParamValues { get; set; }
         public Dictionary<string, object> PropertyValues { get; set; }
 
-        public void WithConstructorArgument(string paramName, object paramValue)
+        public IClassDescription WithConstructorArgument(string paramName, object paramValue)
         {
             TryCreateConstructorParamValues();
             CheckDuplicateConstructorParamRegistration(paramName);
             CheckConstructorWithParamExists(paramName);
             ConstructorParamValues[paramName] = paramValue;
+            return this;
         }
 
         private void CheckConstructorWithParamExists(string paramName)
         {
             ConstructorInfo constructorWithTheParam = ObjectType
                 .GetConstructors()
-                .FirstOrDefault(c =>
-                    c.GetParameters()
-                    .FirstOrDefault(p => p.Name.Equals(paramName)) != null);
+                .FirstOrDefault(c => c.GetParameters()
+                   .Any(p => p.Name.Equals(paramName)));
+
             if (constructorWithTheParam == null)
             {
                 throw new InvalidOperationException($"No constructor was found with parameter '{paramName}' in the class '{ClassName()}'");
@@ -56,12 +57,13 @@ namespace InversionOfControlContainer
             return false;
         }
 
-        public void WithPropertyValue(string propertyName, object propertyValue)
+        public IClassDescription WithPropertyValue(string propertyName, object propertyValue)
         {
             TryCreatePropertyValues();
             CheckDuplicatePropertyRegistration(propertyName);
             CheckPropertyExists(propertyName);
             PropertyValues[propertyName] = propertyValue;
+            return this;
         }
 
         private void CheckPropertyExists(string propertyName)

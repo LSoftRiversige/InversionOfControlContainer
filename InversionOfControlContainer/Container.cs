@@ -9,7 +9,6 @@ namespace InversionOfControlContainer
     public class Container : IContainer
     {
         private readonly Dictionary<Type, IClassDescription> bindings;
-        private Type lastBinding;
         private Dictionary<Type, object> singletonObjects;
 
         public Dictionary<Type, IClassDescription> Bindings => bindings;
@@ -19,16 +18,16 @@ namespace InversionOfControlContainer
             bindings = new Dictionary<Type, IClassDescription>();
         }
 
-        public IContainer Bind<TInterface, TClass>()
+        public IClassDescription Bind<TInterface, TClass>()
         {
             return Bind(typeof(TInterface), typeof(TClass));
         }
 
         private void CheckBindParams(Type interfaceType, Type classType)
         {
-            if (interfaceType.IsClass)
+            if (classType.IsInterface)
             {
-                throw new InvalidOperationException($"'{GetName(interfaceType)}' must be an interface");
+                throw new InvalidOperationException($"'{GetName(classType)}' cannot be an interface");
             }
             bool same = interfaceType == classType;
             if (same)
@@ -38,6 +37,31 @@ namespace InversionOfControlContainer
             if (Bindings.ContainsKey(interfaceType))
             {
                 throw new InvalidOperationException($"Duplicate register of binding '{GetName(interfaceType)}' => '{GetName(classType)}'");
+            }
+            
+        }
+
+        private void CheckStackOverflow(Type classType, HashSet<Type> usedTypes)
+        {
+            if (!usedTypes.Add(classType))
+            {
+                throw new StackOverflowException($"Circular constructor parameter reference for class '{classType.Name}'");
+            }
+            ConstructorInfo constructor = FindConstructorWithMininumParameters(classType);
+            ParameterInfo[] paramArray = constructor.GetParameters();
+            foreach (var p in paramArray)
+            {
+                if (p.ParameterType.IsClass)
+                {
+                    CheckStackOverflow(p.ParameterType, usedTypes);
+                }
+                else if (p.ParameterType.IsInterface)
+                {
+                    if (Bindings.TryGetValue(p.ParameterType, out IClassDescription classDescription))
+                    {
+                        CheckStackOverflow(classDescription.ObjectType, usedTypes);
+                    }
+                }
             }
         }
 
@@ -50,45 +74,27 @@ namespace InversionOfControlContainer
         {
             return (T)Get(typeof(T), isSingltone: true);
         }
-
-        public IContainer WithConstructorArgument(string paramName, object paramValue)
-        {
-            IClassDescription classDescription = GetLastBindingClass("WithConstructorArgument");
-            classDescription.WithConstructorArgument(paramName, paramValue);
-            return this;
-        }
-
-        public IContainer Bind(Type interfaceType, Type classType)
+        
+        public IClassDescription Bind(Type interfaceType, Type classType)
         {
             CheckBindParams(interfaceType, classType);
-            lastBinding = interfaceType;
-            Bindings[lastBinding] = new ClassDescription() { ObjectType = classType };
-            return this;
+            Bindings[interfaceType] = new ClassDescription() { ObjectType = classType };
+            CheckStackOverflow(classType, new HashSet<Type>());
+            return Bindings[interfaceType];
         }
-
-        public IContainer WithPropertyValue(string name, object value)
-        {
-            IClassDescription classDescription = GetLastBindingClass("WithPropertyValue");
-            classDescription.WithPropertyValue(name, value);
-            return this;
-        }
-
+        
         public T Get<T>()
         {
             return (T)Get(typeof(T));
         }
 
-        private object Get(Type type, HashSet<Type> stack = null, bool isSingltone = false)
+        private object Get(Type type, bool isSingltone = false)
         {
             object[] constructorParams = null;
 
             IClassDescription theClass = FindClassDescription(type);
-
-            if (stack == null)
-            {
-                stack = new HashSet<Type> { type };
-            }
-            constructorParams = InjectParametersToConstructor(theClass, stack);
+            
+            constructorParams = InjectParametersToConstructor(theClass);
 
             object obj = CreateObject(theClass.ObjectType, constructorParams, isSingltone);
 
@@ -96,22 +102,7 @@ namespace InversionOfControlContainer
 
             return obj;
         }
-
-        private IClassDescription GetLastBindingClass(string methodName)
-        {
-            CheckLastBinding(methodName);
-            IClassDescription classDescription = Bindings[lastBinding];
-            return classDescription;
-        }
-
-        private void CheckLastBinding(string methodName)
-        {
-            if (lastBinding == null)
-            {
-                throw new InvalidOperationException($"Method '{methodName}' must called after 'Bind'");
-            }
-        }
-
+        
         private object CreateObject(Type type, object[] constructorParams, bool isSingltone)
         {
             object obj;
@@ -214,55 +205,51 @@ namespace InversionOfControlContainer
             }
         }
 
-        private object[] InjectParametersToConstructor(IClassDescription theClass, HashSet<Type> stack)
+        private object[] InjectParametersToConstructor(IClassDescription theClass)
         {
-            ConstructorInfo constructor = GetConstructorWithMinimumParams(theClass);
+            ParameterInfo[] parameters = DefineConstructorParams(theClass);
+            return GetParamValues(parameters, theClass);
+        }
+
+        private static ParameterInfo[] DefineConstructorParams(IClassDescription theClass)
+        {
+            ConstructorInfo constructor = FindConstructorWithMininumParameters(theClass.ObjectType);
             ParameterInfo[] parameters = constructor.GetParameters();
-            return GetParamValues(parameters, theClass, stack);
+            return parameters;
         }
 
-        private static ConstructorInfo GetConstructorWithMinimumParams(IClassDescription theClass)
+        private static ConstructorInfo FindConstructorWithMininumParameters(Type classType)
         {
-            return theClass.ObjectType.GetConstructors().OrderBy(c => c.GetParameters().Count()).First();
+            return classType.GetConstructors().OrderBy(c => c.GetParameters().Count()).First();
         }
 
-        private object[] GetParamValues(ParameterInfo[] parameters, IClassDescription theClass, HashSet<Type> stack)
+        private object[] GetParamValues(ParameterInfo[] parameters, IClassDescription theClass)
         {
             object[] result = new object[parameters.Length];
 
             int i = 0;
             foreach (ParameterInfo p in parameters)
             {
-                result[i++] = DefineParamValue(theClass, p, stack);
+                result[i++] = DefineParamValue(theClass, p);
             }
             return result;
         }
 
-        private object DefineParamValue(IClassDescription theClass, ParameterInfo p, HashSet<Type> stack)
+        private object DefineParamValue(IClassDescription theClass, ParameterInfo p)
         {
             Type typeOfParam = p.ParameterType;
             TypeCode typeCode = Type.GetTypeCode(typeOfParam);
             bool isObject = typeCode == TypeCode.Object;
             if (isObject)
             {
-                CheckStackOverflow(stack, typeOfParam);
-                return Get(typeOfParam, stack);
+                return Get(typeOfParam);
             }
             else
             {
                 return GetValueByName(p.Name, theClass);
             }
         }
-
-        private static void CheckStackOverflow(HashSet<Type> stack, Type typeOfParam)
-        {
-            bool inStack = stack.Contains(typeOfParam);
-            if (inStack)
-            {
-                throw new InvalidOperationException($"Circular constructor parameter reference for class '{typeOfParam.Name}'");
-            }
-        }
-
+        
         private object GetValueByName(string name, IClassDescription classDescription)
         {
             bool found = classDescription.ConstructorParamValues.ContainsKey(name);

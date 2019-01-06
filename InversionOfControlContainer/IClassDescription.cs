@@ -9,8 +9,8 @@ namespace InversionOfControlContainer
         Dictionary<string, object> ConstructorParamValues { get; set; }
         Type ObjectType { get; set; }
 
-        void WithConstructorArgument(string paramName, object paramValue);
-        void WithPropertyValue(string propertyName, object value);
+        IClassDescription WithConstructorArgument(string paramName, object paramValue);
+        IClassDescription WithPropertyValue(string propertyName, object value);
         bool TryInjectProperty(PropertyInfo property, object obj);
     }
 }
