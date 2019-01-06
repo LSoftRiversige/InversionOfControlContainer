@@ -9,15 +9,19 @@ namespace InversionOfControlContainer
     public class ClassDescription : IClassDescription
     {
         public Type ObjectType { get; set; }
-        public Dictionary<string, object> ConstructorParamValues { get; set; }
-        public Dictionary<string, object> PropertyValues { get; set; }
+        
+        private ClassInjector injector;
+
+        public ClassDescription()
+        {
+            injector = new ClassInjector();
+        }
 
         public IClassDescription WithConstructorArgument(string paramName, object paramValue)
         {
-            TryCreateConstructorParamValues();
-            CheckDuplicateConstructorParamRegistration(paramName);
+            injector.CheckDuplicateConstructorParamRegistration(paramName);
             CheckConstructorWithParamExists(paramName);
-            ConstructorParamValues[paramName] = paramValue;
+            injector.AddParam(paramName, paramValue);
             return this;
         }
 
@@ -39,30 +43,11 @@ namespace InversionOfControlContainer
             return ObjectType.Name;
         }
 
-        private void CheckDuplicateConstructorParamRegistration(string paramName)
-        {
-            if (ConstructorParamValues.ContainsKey(paramName))
-            {
-                throw new InvalidOperationException($"Parameter '{paramName}' already registered");
-            }
-        }
-
-        private bool TryCreateConstructorParamValues()
-        {
-            if (ConstructorParamValues == null)
-            {
-                ConstructorParamValues = new Dictionary<string, object>();
-                return true;
-            }
-            return false;
-        }
-
         public IClassDescription WithPropertyValue(string propertyName, object propertyValue)
         {
-            TryCreatePropertyValues();
-            CheckDuplicatePropertyRegistration(propertyName);
+            injector.CheckDuplicatePropertyRegistration(propertyName);
             CheckPropertyExists(propertyName);
-            PropertyValues[propertyName] = propertyValue;
+            injector.AddProperty(propertyName, propertyValue);
             return this;
         }
 
@@ -74,37 +59,18 @@ namespace InversionOfControlContainer
             }
         }
 
-        private void CheckDuplicatePropertyRegistration(string propertyName)
+        public void InjectPropertiesToObject(object obj)
         {
-            if (PropertyValues.ContainsKey(propertyName))
+            PropertyInfo[] properties = ObjectType.GetProperties();
+            foreach (var prop in properties)
             {
-                throw new InvalidOperationException($"Property '{propertyName}' already registered");
+                injector.TryInjectProperty(prop, obj);
             }
         }
 
-        private bool TryCreatePropertyValues()
+        public object GetValueByName(string name)
         {
-            if (PropertyValues == null)
-            {
-                PropertyValues = new Dictionary<string, object>();
-                return true;
-            }
-            return false;
-        }
-
-        public bool TryInjectProperty(PropertyInfo property, object obj)
-        {
-            if (PropertyValues == null)
-            {
-                return false;
-            }
-            if (PropertyValues.ContainsKey(property.Name))
-            {
-                var value = PropertyValues[property.Name];
-                property.SetValue(obj, value);
-                return true;
-            }
-            return false;
+            return injector.GetValueByName(name);
         }
     }
 }

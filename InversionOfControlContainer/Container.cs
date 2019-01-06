@@ -8,17 +8,17 @@ namespace InversionOfControlContainer
 {
     public class Container : IContainer
     {
-        private readonly Dictionary<Type, IClassDescription> bindings;
+        private readonly Dictionary<Type, ClassDescription> bindings;
         private Dictionary<Type, object> singletonObjects;
 
-        public Dictionary<Type, IClassDescription> Bindings => bindings;
+        public Dictionary<Type, ClassDescription> Bindings => bindings;
 
         public Container()
         {
-            bindings = new Dictionary<Type, IClassDescription>();
+            bindings = new Dictionary<Type, ClassDescription>();
         }
 
-        public IClassDescription Bind<TInterface, TClass>()
+        public ClassDescription Bind<TInterface, TClass>()
         {
             return Bind(typeof(TInterface), typeof(TClass));
         }
@@ -57,7 +57,7 @@ namespace InversionOfControlContainer
                 }
                 else if (p.ParameterType.IsInterface)
                 {
-                    if (Bindings.TryGetValue(p.ParameterType, out IClassDescription classDescription))
+                    if (Bindings.TryGetValue(p.ParameterType, out ClassDescription classDescription))
                     {
                         CheckStackOverflow(classDescription.ObjectType, usedTypes);
                     }
@@ -75,12 +75,13 @@ namespace InversionOfControlContainer
             return (T)Get(typeof(T), isSingltone: true);
         }
         
-        public IClassDescription Bind(Type interfaceType, Type classType)
+        public ClassDescription Bind(Type interfaceType, Type classType)
         {
             CheckBindParams(interfaceType, classType);
-            Bindings[interfaceType] = new ClassDescription() { ObjectType = classType };
+            ClassDescription result = new ClassDescription() { ObjectType = classType };
+            Bindings[interfaceType] = result;
             CheckStackOverflow(classType, new HashSet<Type>());
-            return Bindings[interfaceType];
+            return result;
         }
         
         public T Get<T>()
@@ -98,7 +99,7 @@ namespace InversionOfControlContainer
 
             object obj = CreateObject(theClass.ObjectType, constructorParams, isSingltone);
 
-            InjectPropertiesToObject(obj, theClass);
+            theClass.InjectPropertiesToObject(obj);
 
             return obj;
         }
@@ -186,23 +187,11 @@ namespace InversionOfControlContainer
             return bindings.FirstOrDefault(p => p.Value.ObjectType.Equals(t)).Value;
         }
 
-        private IClassDescription AddClassDescription(Type t)
+        private ClassDescription AddClassDescription(Type t)
         {
-            IClassDescription foundClass = new ClassDescription() { ObjectType = t };
+            ClassDescription foundClass = new ClassDescription() { ObjectType = t };
             bindings[t] = foundClass;
             return foundClass;
-        }
-
-        private void InjectPropertiesToObject(object obj, IClassDescription theClass)
-        {
-            if (theClass != null)
-            {
-                PropertyInfo[] properties = theClass.ObjectType.GetProperties();
-                foreach (var prop in properties)
-                {
-                    theClass.TryInjectProperty(prop, obj);
-                }
-            }
         }
 
         private object[] InjectParametersToConstructor(IClassDescription theClass)
@@ -246,18 +235,8 @@ namespace InversionOfControlContainer
             }
             else
             {
-                return GetValueByName(p.Name, theClass);
+                return theClass.GetValueByName(p.Name);
             }
-        }
-        
-        private object GetValueByName(string name, IClassDescription classDescription)
-        {
-            bool found = classDescription.ConstructorParamValues.ContainsKey(name);
-            if (!found)
-            {
-                throw new KeyNotFoundException($"Parameter {name} not found in value list");
-            }
-            return classDescription.ConstructorParamValues[name];
         }
 
         private IClassDescription DescriptionByInterface(Type typeOfInterface)
