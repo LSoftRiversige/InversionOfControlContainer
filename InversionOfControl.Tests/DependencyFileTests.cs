@@ -24,7 +24,7 @@ namespace InversionOfControl.Tests
         public void LoadFromFile_FileNotExists_Throw()
         {
             var f = new DependencyFile(
-                new Container(), 
+                new Container(),
                 new StringDependencyParser(
                     Assembly.GetExecutingAssembly()));
 

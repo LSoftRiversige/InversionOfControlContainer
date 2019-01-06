@@ -9,7 +9,7 @@ namespace InversionOfControlContainer
     public class ClassDescription : IClassDescription
     {
         public Type ObjectType { get; set; }
-        
+
         private ClassInjector injector;
 
         public ClassDescription()

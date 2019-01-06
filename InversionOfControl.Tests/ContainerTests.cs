@@ -78,7 +78,7 @@ namespace InversionOfControl.Tests
             StackOverflowException e = Assert.Throws<StackOverflowException>(() => container.Bind<IInvoice, Invoice>());
             Assert.Equal("Circular constructor parameter reference for class 'Invoice'", e.Message);
         }
-           
+
         [Fact]
         public void Bind_StackOverflowCheckChainStoreX_Throws()
         {
@@ -99,7 +99,7 @@ namespace InversionOfControl.Tests
 
             Exception e = Assert.Throws<InvalidOperationException>(() => container.Bind<IBar, Bar>());
             Assert.Equal("Duplicate register of binding 'IBar' => 'Bar'", e.Message);
-        }        
+        }
 
         [Fact]
         public void Bind_SameRefs_Throws()
@@ -118,7 +118,7 @@ namespace InversionOfControl.Tests
             Exception e = Assert.Throws<InvalidOperationException>(() => container.Bind<Bar, IBar>());
             Assert.Equal("'IBar' cannot be an interface", e.Message);
         }
-        
+
         [Fact]
         public void WithConstructorArgument_CheckValues_NewInstance()
         {
@@ -136,9 +136,9 @@ namespace InversionOfControl.Tests
         public void WithConstructorArgument_ParamNotFound_Throws()
         {
             var container = new Container();
-            
 
-            Exception e = Assert.Throws<InvalidOperationException>(() => 
+
+            Exception e = Assert.Throws<InvalidOperationException>(() =>
                 container.Bind<IWarrior, Warrior>()
                 .WithConstructorArgument("name1", "NameOfWarrior"));
             Assert.Equal("No constructor was found with parameter 'name1' in the class 'Warrior'", e.Message);
@@ -175,7 +175,7 @@ namespace InversionOfControl.Tests
             var container = new Container();
             const int c100 = 100;
 
-            InvalidOperationException e = Assert.Throws<InvalidOperationException>(() => 
+            InvalidOperationException e = Assert.Throws<InvalidOperationException>(() =>
                 container.Bind<IFoo, Foo>()
                     .WithPropertyValue("Counter", c100)
                     .WithPropertyValue("Counter", 1));
@@ -187,8 +187,8 @@ namespace InversionOfControl.Tests
         {
             var container = new Container();
             const int c100 = 100;
-            
-            InvalidOperationException e = Assert.Throws<InvalidOperationException>(() => 
+
+            InvalidOperationException e = Assert.Throws<InvalidOperationException>(() =>
                 container.Bind<IFoo, Foo>()
                 .WithPropertyValue("Counter1", c100));
             Assert.Equal("Property 'Counter1' not found in class 'Foo'", e.Message);
@@ -240,6 +240,6 @@ namespace InversionOfControl.Tests
             Lazy<Bar> lazyBar = container.GetLazy<Bar>();
 
             Assert.Equal(typeof(Bar), lazyBar.Value.GetType());
-        }       
+        }
     }
 }

@@ -38,7 +38,7 @@ namespace InversionOfControlContainer
         {
             return (T)Get(typeof(T));
         }
-                
+
         public T GetSingltone<T>()
         {
             return (T)Get(typeof(T), isSingltone: true);
@@ -100,7 +100,7 @@ namespace InversionOfControlContainer
             {
                 throw new InvalidOperationException($"Duplicate register of binding '{GetName(interfaceType)}' => '{GetName(classType)}'");
             }
-            
+
         }
 
         private void CheckStackOverflow(Type classType, HashSet<Type> usedTypes)
@@ -131,21 +131,21 @@ namespace InversionOfControlContainer
         {
             return t.Name;
         }
-        
+
         private object CreateObject(Type type, object[] constructorParams)
         {
             object obj;
-            
+
             bool noParams = constructorParams == null;
             if (noParams)
             {
-                obj = Activator.CreateInstance(type);               
+                obj = Activator.CreateInstance(type);
             }
             else
             {
                 obj = Activator.CreateInstance(type, constructorParams);
             }
-            
+
             return obj;
         }
 
